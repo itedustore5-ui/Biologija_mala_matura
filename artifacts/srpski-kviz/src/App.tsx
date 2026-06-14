@@ -182,7 +182,7 @@ if (question.type === "match") {
         // FIX 1: obični slot — poredi svaki odgovor sa correctSlotAnswers
         const userVals = answer.split(",");
         return (question.correctSlotAnswers ?? []).some((ca) =>
-          ca.every((correctVal, i) => Number(userVals[i]) === Number(correctVal))
+          ca.every((correctVal, i) => userVals[i] === correctVal)
         );
       }
     }
@@ -778,7 +778,7 @@ function SlotUI({ question, locked, onCommit, onRegisterConfirm }: {
   const isMulti = question.slotMulti ?? false;
 
   const [selections, setSelections] = useState<Record<number, any>>({});
-  const [multiSelections, setMultiSelections] = useState<Record<number, Set<number>>>({});
+  const [multiSelections, setMultiSelections] = useState<Record<number, Set<string | number>>>({});
   useEffect(() => { setSelections({}); setMultiSelections({}); }, [question.id]);
   useEffect(() => {
     onRegisterConfirm?.(isMulti ? commitMulti : commitDropdown);
@@ -793,7 +793,7 @@ function SlotUI({ question, locked, onCommit, onRegisterConfirm }: {
   const commitDropdown = () => onCommit(slots.map((_, i) => selections[i] ?? "").join(","));
 
   const lockedMultiSlots = locked?.split("|") ?? [];
-  const toggleMulti = (slotIdx: number, opt: number) => {
+  const toggleMulti = (slotIdx: number, opt: string | number) => {
     if (locked !== undefined) return;
     setMultiSelections((prev) => {
       const next = { ...prev };
@@ -806,7 +806,7 @@ function SlotUI({ question, locked, onCommit, onRegisterConfirm }: {
   const multiAllFilled = slots.every((_, i) => (multiSelections[i]?.size ?? 0) > 0);
   const commitMulti = () => {
     const answer = slots.map((_, i) =>
-      [...(multiSelections[i] ?? [])].sort((a, b) => a - b).join(",")
+      [...(multiSelections[i] ?? [])].sort((a, b) => String(a).localeCompare(String(b))).join(",")
     ).join("|");
     onCommit(answer);
   };
@@ -819,12 +819,12 @@ function SlotUI({ question, locked, onCommit, onRegisterConfirm }: {
         <p className="text-xs md:text-sm text-blue-200 -mb-1">Означите бројеве за сваки тип:</p>
         {slots.map((slot, i) => {
           const selectedVals = locked !== undefined
-            ? new Set(lockedMultiSlots[i]?.split(",").map(Number).filter(Boolean) ?? [])
-            : (multiSelections[i] ?? new Set<number>());
-          const correctVals = new Set((correctAns[i]?.[0] ?? "").split(",").map(Number).filter(Boolean));
+            ? new Set(lockedMultiSlots[i]?.split(",").map((v) => (isNaN(Number(v)) ? v : Number(v))).filter(Boolean) ?? [])
+            : (multiSelections[i] ?? new Set<string | number>());
+          const correctVals = new Set((correctAns[i]?.[0] ?? "").split(",").map((v) => (isNaN(Number(v)) ? v : Number(v))).filter(Boolean));
           const isCorrect = locked !== undefined &&
            [...correctVals].every((v) => selectedVals.has(v)) &&
-            selectedVals.size === correctVals.size;
+             selectedVals.size === correctVals.size;
           const isWrong = locked !== undefined && !isCorrect;
           return (
             <div key={i} className={`rounded-2xl border p-3 ${isCorrect ? "border-emerald-400/40 bg-emerald-500/15" : isWrong ? "border-red-400/40 bg-red-500/15" : "border-white/10 bg-white/5"}`}>
@@ -861,7 +861,7 @@ function SlotUI({ question, locked, onCommit, onRegisterConfirm }: {
       {slots.map((slot, i) => {
         const val = locked !== undefined ? lockedSelections[i] : selections[i];
         // FIX 2: koristi Number(val) da bi poređenje string/number uvek bilo ispravno
-        const isCorrect = locked !== undefined && correctAns.some((ca) => Number(ca[i]) === Number(val));
+        const isCorrect = locked !== undefined && correctAns.some((ca) => ca[i] === val);
         const isWrong = locked !== undefined && !isCorrect;
         return (
           <div key={i} className={`flex items-center gap-3 rounded-2xl border p-2 md:p-3 ${isCorrect ? "border-emerald-400/40 bg-emerald-500/15" : isWrong ? "border-red-400/40 bg-red-500/15" : "border-white/10 bg-white/5"}`}>
