@@ -1627,12 +1627,12 @@ export const questions: QuizQuestion[] = [
   {
     id: 113, type: "single", subject: "biologija",
     imageQuestion: null, points: 1,
-    question: "Маша је добила температуру, кијавицу и болове у мишићима. Доктор је утврдио вирусну инфекцију. Zašto Маша nije dobila антибиотик?",
+    question: "Маша је добила температуру, кијавицу и болове у мишићима. Доктор јој је објаснио да има вирусну инфекцију и саветовао јој да се одмара, пије много течности и не иде у школу да не зарази и другу децу. Зашто Маша није добила антибиотик? Обој кружић испред тачног одговора",
     options: [
       "Антибиотици делују само на бактерије и не могу да униште вирусе.",
       "Вируси брзо нестају сами, па нема потребе за лечењем.",
-      "Антибиотици делују само kad особа нема температуру.",
-      "Антибиотици se koriste kada је неко алергичан.",
+      "Антибиотици делују само кад особа нема температуру.",
+      "Антибиотици se користе када је неко алергичан.",
     ],
     correctAnswer: 0,
     explanation: "Антибиотици делују на бактеријске ћелијске структуре — вируси их немају, pa na njima antibiotici nemaju efekta.",
@@ -1655,15 +1655,15 @@ export const questions: QuizQuestion[] = [
   {
     id: 115, type: "single", subject: "biologija",
     imageQuestion: null, points: 1,
-    question: "Od наведених supstanci, jedine koje se ne razlažu varenjem, vec se koriste u izvornom obliku su:",
+    question: "Од наведених супстанци, једине које се не разлажу варењем у нашем организму, већ се користе у изворном облику су:",
     options: [
-      "ugljeni hidrati iz hleba",
-      "masti iz suhomesnatog proizvoda",
-      "proteini iz pečuraka",
-      "vitamini iz kivija",
+      "угљени хидрати из хлеба",
+      "масти из сухомеснатог производа",
+      "протеини из печурака",
+      "витамини из кивија",
     ],
     correctAnswer: 3,
-    explanation: "Витамини se апсорбују bez prethodne хемијске разградње. Ugljeni hidrati, masti и proteini se razlažu пробавним ензимима.",
+    explanation: "Витамини се апсорбују без претходне хемијске разградње. Угљени хидрати, масти и протеини се разлажу пробавним ензимима.",
   },
 
   {
