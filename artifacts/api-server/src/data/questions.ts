@@ -139,7 +139,7 @@ export const questions: QuizQuestion[] = [
 
   {
     id: 6, type: "fill", subject: "biologija",
-    imageQuestion: "6.jpg", points: 1,
+    imageQuestion: "/images/6.jpg", points: 1,
     question: "Из колико ћелија се састоји организам представљен на слици?\n\nОдговор:",
     correctText: ["1"],
     explanation: "На слици је приказан једноћелијски организам — састоји се из само 1 ћелије.",
