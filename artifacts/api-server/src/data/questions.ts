@@ -1368,7 +1368,6 @@ export const questions: QuizQuestion[] = [
   // ─────────────────────────────────────────────────────────────
 
   {
-  {
   id: 97,
   type: "slot",
   subject: "biologija",
