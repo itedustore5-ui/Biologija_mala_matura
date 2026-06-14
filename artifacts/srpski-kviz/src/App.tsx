@@ -181,9 +181,8 @@ if (question.type === "match") {
       } else {
         // FIX 1: obični slot — poredi svaki odgovor sa correctSlotAnswers
         const userVals = answer.split(",");
-        return (question.correctSlotAnswers ?? []).some((ca) =>
-          ca.every((correctVal, i) => userVals[i] === correctVal)
-        );
+        // For non-multi mode, check if each slot's value matches the correct answer for that slot
+        return (question.correctSlotAnswers ?? []).every((ca, i) => ca[0] === userVals[i]);
       }
     }
   } catch { return false; }
@@ -860,8 +859,8 @@ function SlotUI({ question, locked, onCommit, onRegisterConfirm }: {
       <p className="text-xs md:text-sm text-blue-200 -mb-1">Изаберите редни број модула за сваки слот:</p>
       {slots.map((slot, i) => {
         const val = locked !== undefined ? lockedSelections[i] : selections[i];
-        // FIX 2: koristi Number(val) da bi poređenje string/number uvek bilo ispravno
-        const isCorrect = locked !== undefined && correctAns.some((ca) => ca[i] === val);
+        // FIX: Check if the current slot's value matches the correct answer for that slot
+        const isCorrect = locked !== undefined && correctAns[i]?.[0] === val;
         const isWrong = locked !== undefined && !isCorrect;
         return (
           <div key={i} className={`flex items-center gap-3 rounded-2xl border p-2 md:p-3 ${isCorrect ? "border-emerald-400/40 bg-emerald-500/15" : isWrong ? "border-red-400/40 bg-red-500/15" : "border-white/10 bg-white/5"}`}>
@@ -877,7 +876,7 @@ function SlotUI({ question, locked, onCommit, onRegisterConfirm }: {
                <option key={opt} value={opt}>{opt === 0 ? "X" : opt}</option>
               ))}
             </select>
-            {isWrong && <span className="text-xs text-red-300">тачно: {correctAns[0]?.[i]}</span>}
+            {isWrong && <span className="text-xs text-red-300">тачно: {correctAns[i]?.[0]}</span>}
           </div>
         );
       })}
