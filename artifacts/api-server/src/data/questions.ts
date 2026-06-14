@@ -275,7 +275,7 @@ export const questions: QuizQuestion[] = [
   },
 
   {
-    id: 16, type:: "slot", subject: "biologija",
+    id: 16, type: "slot", subject: "biologija",
   imageQuestion: null, points: 2,
   question: "Обој кружић у одговарајућем пољу тако да повежеш организам са начином бесполног размножавања.",
   slots: [
