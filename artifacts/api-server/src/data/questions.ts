@@ -32,11 +32,14 @@ export type OrderQ = {
   hasSkips?: boolean;
   explanation: string; imageQuestion?: boolean;
 };
+type SlotValue = number | string;
+
 export type SlotQ = {
-  id: number; type: "slot"; subject: string; points: number;
-  question: string; slots: string[]; options: number[];
-  correctAnswers: number[][];
-  explanation: string; imageQuestion?: boolean;
+  id: number;   type: "slot";  subject: string;  points: number;
+  question: string;   slots: string[];
+  options: SlotValue[];  correctAnswers: SlotValue[][];
+  explanation: string;
+  imageQuestion?: boolean;
 };
 export type QuizQuestion = SingleQ | MultiQ | FillQ | MatchQ | OrderQ| SlotQ;
 
