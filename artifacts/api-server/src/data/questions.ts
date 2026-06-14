@@ -86,9 +86,9 @@ export const questions: QuizQuestion[] = [
     id: 2, type: "slot", subject: "biologija",
     imageQuestion: null, points: 2,
     question: "Обој кружић (изабери) у одговарајућем пољу тако да повежеш примере живе и неживе природе",
-   slots: ["квасац", "кухињска со", "шећер", "камилица"],
-  slotOptions: ["Жива природа", "Нежива природа"],
-  correctSlotAnswers: [ 0,1,1,0],
+    slots: ["квасац", "кухињска со", "шећер", "камилица"],
+    slotOptions: ["Жива природа", "Нежива природа"],
+    correctSlotAnswers: [["Жива природа"], ["Нежива природа"], ["Нежива природа"], ["Жива природа"]],
     explanation: "Квасац и камилица су живи организми. Кухињска со и шећер су неживе материје.",
   },
 
@@ -117,7 +117,7 @@ export const questions: QuizQuestion[] = [
   {
     id: 4, type: "match", subject: "biologija",
     imageQuestion: null, points: 2,
-    question: "Повежи царство са одговарајућим представником.",
+    question: "Обој кружић (повежи) у одговарајућем пољу тако да повежеш царство са његовим представником.",
     leftItems: ["Пекарски квасац", "Бела рада", "Зелени скакавац"],
     rightItems: ["Биљке", "Животиње", "Гљиве"],
     correctPairs: [2, 0, 1],
