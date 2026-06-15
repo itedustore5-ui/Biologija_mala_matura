@@ -141,14 +141,11 @@ function isAnswerCorrect(question: Question, answer: string): boolean {
       return sel.length === exp.length && sel.every((v, i) => v === exp[i]);
     }
     if (question.type === "fill") {
-      const correct = question.correctAnswers ?? question.correctText ?? [];
-      const correctArray = Array.isArray(correct) ? correct : [correct];
-      const correctStr = correctArray.map(c => String(c).trim().toLowerCase());
-      if (correctStr.length > 1) {
+      if (Array.isArray(question.correctText)) {
         const parts = answer.split("|").map((s) => s.trim().toLowerCase());
-        return correctStr.every((c, i) => c === (parts[i] ?? ""));
+        return question.correctText.every((c, i) => c.trim().toLowerCase() === (parts[i] ?? ""));
       }
-      return answer.trim().toLowerCase() === correctStr[0];
+      return answer.trim().toLowerCase() === (question.correctText ?? "").trim().toLowerCase();
     }
 if (question.type === "match") {
   const pairs = answer.split(",").map(Number);
@@ -184,9 +181,8 @@ if (question.type === "match") {
       } else {
         // FIX 1: obični slot — poredi svaki odgovor sa correctSlotAnswers
         const userVals = answer.split(",");
-        return (question.correctSlotAnswers ?? []).some((ca) =>
-          ca.every((correctVal, i) => Number(userVals[i]) === Number(correctVal))
-        );
+        // For non-multi mode, check if each slot's value matches the correct answer for that slot
+        return (question.correctSlotAnswers ?? []).every((ca, i) => ca[0] === userVals[i]);
       }
     }
   } catch { return false; }
@@ -578,7 +574,7 @@ function FillUI({ question, locked, onCommit, onRegisterConfirm }: {
       />
       {locked !== undefined && (
         <p className={`mt-3 font-black text-xs md:text-base ${isAnswerCorrect(question, locked) ? "text-emerald-200" : "text-red-200"}`}>
-          {isAnswerCorrect(question, locked) ? "Тачно" : `Нетачно — тачан одговор: ${Array.isArray(question.correctAnswers) ? question.correctAnswers.join(", ") : question.correctAnswers}`}
+          {isAnswerCorrect(question, locked) ? "Тачно" : `Нетачно — тачан одговор: ${Array.isArray(question.correctText) ? question.correctText.join(", ") : question.correctText}`}
         </p>
       )}
     </div>
@@ -822,12 +818,12 @@ function SlotUI({ question, locked, onCommit, onRegisterConfirm }: {
         <p className="text-xs md:text-sm text-blue-200 -mb-1">Означите бројеве за сваки тип:</p>
         {slots.map((slot, i) => {
           const selectedVals = locked !== undefined
-            ? new Set(lockedMultiSlots[i]?.split(",").map(v => isNaN(Number(v)) ? v : Number(v)).filter(Boolean) ?? [])
+            ? new Set(lockedMultiSlots[i]?.split(",").map((v) => (isNaN(Number(v)) ? v : Number(v))).filter(Boolean) ?? [])
             : (multiSelections[i] ?? new Set<string | number>());
-          const correctVals = new Set((correctAns[i]?.join(",") ?? "").split(",").map(v => isNaN(Number(v)) ? v : Number(v)).filter(Boolean));
+          const correctVals = new Set((correctAns[i]?.[0] ?? "").split(",").map((v) => (isNaN(Number(v)) ? v : Number(v))).filter(Boolean));
           const isCorrect = locked !== undefined &&
            [...correctVals].every((v) => selectedVals.has(v)) &&
-            selectedVals.size === correctVals.size;
+             selectedVals.size === correctVals.size;
           const isWrong = locked !== undefined && !isCorrect;
           return (
             <div key={i} className={`rounded-2xl border p-3 ${isCorrect ? "border-emerald-400/40 bg-emerald-500/15" : isWrong ? "border-red-400/40 bg-red-500/15" : "border-white/10 bg-white/5"}`}>
@@ -849,7 +845,7 @@ function SlotUI({ question, locked, onCommit, onRegisterConfirm }: {
                   );
                 })}
               </div>
-              {isWrong && <p className="mt-2 text-xs text-red-300">тачно: {correctAns[i]?.join(", ")}</p>}
+              {isWrong && <p className="mt-2 text-xs text-red-300">тачно: {correctAns[i]?.[0]}</p>}
             </div>
           );
         })}
@@ -861,11 +857,10 @@ function SlotUI({ question, locked, onCommit, onRegisterConfirm }: {
   return (
     <div className="mt-4 grid gap-2 md:gap-3">
       <p className="text-xs md:text-sm text-blue-200 -mb-1">Изаберите редни број модула за сваки слот:</p>
-        {slots.map((slot, i) => {
+      {slots.map((slot, i) => {
         const val = locked !== undefined ? lockedSelections[i] : selections[i];
-        // FIX: proper comparison for slot answers - check ALL valid combinations for this slot
-        const validValuesForSlot = Array.from(new Set(correctAns.map(ca => ca[i])));
-        const isCorrect = locked !== undefined && validValuesForSlot.includes(val);
+        // FIX: Check if the current slot's value matches the correct answer for that slot
+        const isCorrect = locked !== undefined && correctAns[i]?.[0] === val;
         const isWrong = locked !== undefined && !isCorrect;
         return (
           <div key={i} className={`flex items-center gap-3 rounded-2xl border p-2 md:p-3 ${isCorrect ? "border-emerald-400/40 bg-emerald-500/15" : isWrong ? "border-red-400/40 bg-red-500/15" : "border-white/10 bg-white/5"}`}>
@@ -881,7 +876,7 @@ function SlotUI({ question, locked, onCommit, onRegisterConfirm }: {
                <option key={opt} value={opt}>{opt === 0 ? "X" : opt}</option>
               ))}
             </select>
-            {isWrong && <span className="text-xs text-red-300">тачно: {correctAns.map(ca => ca[i]).filter((v, i, a) => a.indexOf(v) === i).join(" / ")}</span>}
+            {isWrong && <span className="text-xs text-red-300">тачно: {correctAns[i]?.[0]}</span>}
           </div>
         );
       })}
