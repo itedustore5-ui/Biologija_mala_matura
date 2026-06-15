@@ -166,28 +166,30 @@ if (question.type === "match") {
     vals.every((v, i) => v === correct[i])
   );
 }
-   if (question.type === "slot") {
-  const normalize = (v: string | number) => String(v).trim().toLowerCase();
-  if (question.slotMulti) {
-    const userSlots = answer.split("|").map((s) => new Set(s.split(",").map(Number).filter(Boolean)));
-    const correctSlots = (question.correctSlotAnswers ?? []).map((ca) =>
-      new Set(ca[0].split(",").map(Number).filter(Boolean))
-    );
-    if (userSlots.length !== correctSlots.length) return false;
-    return correctSlots.every(
-      (correct, i) =>
-        correct.size === userSlots[i]?.size &&
-        [...correct].every((v) => userSlots[i]?.has(v))
-    );
-  } else {
-    const userVals = answer.split(",");
-    return (question.correctSlotAnswers ?? []).some(combo =>
-      combo.every((ans, i) => normalize(userVals[i]) === normalize(ans))
-    );
-  }
-} } catch { return false; }
+    if (question.type === "slot") {
+      if (question.slotMulti) {
+        const userSlots = answer.split("|").map((s) => new Set(s.split(",").map(Number).filter(Boolean)));
+        const correctSlots = (question.correctSlotAnswers ?? []).map((ca) =>
+          new Set(ca[0].split(",").map(Number).filter(Boolean))
+        );
+        if (userSlots.length !== correctSlots.length) return false;
+        return correctSlots.every(
+          (correct, i) =>
+            correct.size === userSlots[i]?.size &&
+            [...correct].every((v) => userSlots[i]?.has(v))
+        );
+      } else {
+        // FIX 1: obični slot — poredi svaki odgovor sa correctSlotAnswers
+        const userVals = answer.split(",");
+        return (question.correctSlotAnswers ?? []).some((ca) =>
+          ca.every((correctVal, i) => Number(userVals[i]) === Number(correctVal))
+        );
+      }
+    }
+  } catch { return false; }
   return false;
 }
+
 function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
@@ -776,7 +778,7 @@ function SlotUI({ question, locked, onCommit, onRegisterConfirm }: {
   const isMulti = question.slotMulti ?? false;
 
   const [selections, setSelections] = useState<Record<number, any>>({});
-  const [multiSelections, setMultiSelections] = useState<Record<number, Set<string | number>>>({});
+  const [multiSelections, setMultiSelections] = useState<Record<number, Set<number>>>({});
   useEffect(() => { setSelections({}); setMultiSelections({}); }, [question.id]);
   useEffect(() => {
     onRegisterConfirm?.(isMulti ? commitMulti : commitDropdown);
@@ -791,7 +793,7 @@ function SlotUI({ question, locked, onCommit, onRegisterConfirm }: {
   const commitDropdown = () => onCommit(slots.map((_, i) => selections[i] ?? "").join(","));
 
   const lockedMultiSlots = locked?.split("|") ?? [];
-  const toggleMulti = (slotIdx: number, opt: string | number) => {
+  const toggleMulti = (slotIdx: number, opt: number) => {
     if (locked !== undefined) return;
     setMultiSelections((prev) => {
       const next = { ...prev };
@@ -804,7 +806,7 @@ function SlotUI({ question, locked, onCommit, onRegisterConfirm }: {
   const multiAllFilled = slots.every((_, i) => (multiSelections[i]?.size ?? 0) > 0);
   const commitMulti = () => {
     const answer = slots.map((_, i) =>
-      [...(multiSelections[i] ?? [])].sort((a, b) => String(a).localeCompare(String(b))).join(",")
+      [...(multiSelections[i] ?? [])].sort((a, b) => a - b).join(",")
     ).join("|");
     onCommit(answer);
   };
@@ -815,34 +817,38 @@ function SlotUI({ question, locked, onCommit, onRegisterConfirm }: {
     return (
       <div className="mt-4 grid gap-3">
         <p className="text-xs md:text-sm text-blue-200 -mb-1">Означите бројеве за сваки тип:</p>
-       {slots.map((slot, i) => {
-        const normalize = (v: string | number) => String(v).trim().toLowerCase();
-        const val = locked !== undefined ? lockedSelections[i] : selections[i];
-        const isCorrect = locked !== undefined &&
-          (correctAns ?? []).some(combo => normalize(combo[i]) === normalize(val ?? ""));
-        const isWrong = locked !== undefined && !isCorrect;
-        const matchedCombo = locked !== undefined
-          ? (correctAns ?? []).find(combo =>
-              combo.every((ans, j) => normalize(lockedSelections[j] ?? "") === normalize(ans))
-            ) ?? correctAns[0]
-          : null;
-        return (
-          <div key={i} className={`flex items-center gap-3 rounded-2xl border p-2 md:p-3 ${isCorrect ? "border-emerald-400/40 bg-emerald-500/15" : isWrong ? "border-red-400/40 bg-red-500/15" : "border-white/10 bg-white/5"}`}>
-            <span className="w-20 shrink-0 text-xs md:text-sm font-bold text-blue-200">{slot}</span>
-            <select
-              className="rounded-xl border border-white/20 bg-slate-800 px-2 py-1.5 text-white text-xs md:text-sm"
-              value={val ?? ""}
-              disabled={locked !== undefined}
-              onChange={(e) => setSelections((prev) => ({ ...prev, [i]: e.target.value as any }))}
-            >
-              <option value="">—</option>
-              {options.map((opt) => (
-               <option key={opt} value={opt}>{opt === 0 ? "X" : opt}</option>
-              ))}
-            </select>
-            {isWrong && <span className="text-xs text-red-300">тачно: {matchedCombo?.[i]}</span>}
-          </div>
-                        );
+        {slots.map((slot, i) => {
+          const selectedVals = locked !== undefined
+            ? new Set(lockedMultiSlots[i]?.split(",").map(Number).filter(Boolean) ?? [])
+            : (multiSelections[i] ?? new Set<number>());
+          const correctVals = new Set((correctAns[i]?.[0] ?? "").split(",").map(Number).filter(Boolean));
+          const isCorrect = locked !== undefined &&
+           [...correctVals].every((v) => selectedVals.has(v)) &&
+            selectedVals.size === correctVals.size;
+          const isWrong = locked !== undefined && !isCorrect;
+          return (
+            <div key={i} className={`rounded-2xl border p-3 ${isCorrect ? "border-emerald-400/40 bg-emerald-500/15" : isWrong ? "border-red-400/40 bg-red-500/15" : "border-white/10 bg-white/5"}`}>
+              <p className="text-xs md:text-sm font-bold text-blue-200 mb-2">{slot}</p>
+              <div className="flex flex-wrap gap-2">
+                {options.map((opt) => {
+                  const isSelected = selectedVals.has(opt);
+                  return (
+                    <button
+                      key={opt}
+                      disabled={locked !== undefined}
+                      onClick={() => toggleMulti(i, opt)}
+                      className={`rounded-xl border px-3 py-1.5 text-xs md:text-sm font-bold transition ${
+                        isSelected ? "border-white bg-white/25 text-white" : "border-white/20 bg-white/5 text-blue-200"
+                      }`}
+                    >
+                      {opt}
+                    </button>
+                  );
+                })}
+              </div>
+              {isWrong && <p className="mt-2 text-xs text-red-300">тачно: {correctAns[i]?.[0]}</p>}
+            </div>
+          );
         })}
         {/* Potvrdi is in the bottom bar */}
       </div>
@@ -854,8 +860,8 @@ function SlotUI({ question, locked, onCommit, onRegisterConfirm }: {
       <p className="text-xs md:text-sm text-blue-200 -mb-1">Изаберите редни број модула за сваки слот:</p>
       {slots.map((slot, i) => {
         const val = locked !== undefined ? lockedSelections[i] : selections[i];
-        // FIX: Check if the current slot's value matches the correct answer for that slot
-        const isCorrect = locked !== undefined && correctAns[i]?.[0] === val;
+        // FIX 2: koristi Number(val) da bi poređenje string/number uvek bilo ispravno
+        const isCorrect = locked !== undefined && correctAns.some((ca) => Number(ca[i]) === Number(val));
         const isWrong = locked !== undefined && !isCorrect;
         return (
           <div key={i} className={`flex items-center gap-3 rounded-2xl border p-2 md:p-3 ${isCorrect ? "border-emerald-400/40 bg-emerald-500/15" : isWrong ? "border-red-400/40 bg-red-500/15" : "border-white/10 bg-white/5"}`}>
@@ -871,7 +877,7 @@ function SlotUI({ question, locked, onCommit, onRegisterConfirm }: {
                <option key={opt} value={opt}>{opt === 0 ? "X" : opt}</option>
               ))}
             </select>
-            {isWrong && <span className="text-xs text-red-300">тачно: {correctAns[i]?.[0]}</span>}
+            {isWrong && <span className="text-xs text-red-300">тачно: {correctAns[0]?.[i]}</span>}
           </div>
         );
       })}
