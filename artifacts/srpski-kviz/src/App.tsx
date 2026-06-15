@@ -164,7 +164,6 @@ if (question.type === "slot") {
     return (question.correctSlotAnswers ?? []).every((ca, i) => ca[0] === userVals[i]);
   }
  }  
-}
 
 function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(null);
