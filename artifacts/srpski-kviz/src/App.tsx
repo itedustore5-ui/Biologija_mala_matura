@@ -157,22 +157,10 @@ if (question.type === "match") {
   }
   return pairs.every((v, i) => v === Number(correct[i]));
 }
-    if (question.type === "order") {
-  const vals = answer.split(",").map(Number);
-  const correct = (question.correctOrder ?? []).map((v) => Number(v));
-
-  return (
-    vals.length === correct.length &&
-    vals.every((v, i) => v === correct[i])
-  );
-}
-   if (question.slotMulti) {
+    if (question.slotMulti) {
   const userSlots = answer.split("|").map((s) => new Set(s.split(",").filter(Boolean)));
   const correctSlots = (question.correctSlotAnswers ?? []).map((ca) =>
     new Set(ca[0].split(",").filter(Boolean))
-  );
-  const correctSlots = (question.correctSlotAnswers ?? []).map((ca) =>
-    new Set(ca[0].split(",").filter(Boolean))  // без map(Number)
   );
   if (userSlots.length !== correctSlots.length) return false;
   return correctSlots.every(
@@ -180,12 +168,9 @@ if (question.type === "match") {
       correct.size === userSlots[i]?.size &&
       [...correct].every((v) => userSlots[i]?.has(v))
   );
-      } else {
-        // FIX 1: obični slot — poredi svaki odgovor sa correctSlotAnswers
-        const userVals = answer.split(",");
-        // For non-multi mode, check if each slot's value matches the correct answer for that slot
-        return (question.correctSlotAnswers ?? []).every((ca, i) => ca[0] === userVals[i]);
-      }
+} else {
+  const userVals = answer.split(",");
+  return (question.correctSlotAnswers ?? []).every((ca, i) => ca[0] === userVals[i]);
     }
    catch { return false; }
   return false;
