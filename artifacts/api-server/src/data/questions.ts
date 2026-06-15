@@ -34,11 +34,9 @@ export type OrderQ = {
 };
 export type SlotQ = {
   id: number; type: "slot"; subject: string; points: number;
-  question: string; imageQuestion?: string;
-  slots: string[];
-  slotOptions: (string | number)[];
-  correctSlotAnswers: (string | number)[][];
-  explanation: string;
+  question: string; slots: string[]; options: number[];
+  correctAnswers: number[][];
+  explanation: string; imageQuestion?: boolean;
 };
 export type QuizQuestion = SingleQ | MultiQ | FillQ | MatchQ | OrderQ| SlotQ;
 
