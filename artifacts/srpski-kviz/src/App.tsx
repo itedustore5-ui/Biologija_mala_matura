@@ -267,8 +267,8 @@ function Shell({ user, onLogout, children }: { user: AuthUser; onLogout: () => v
       <header className="sticky top-0 z-30 border-b border-white/10 bg-slate-950/55 backdrop-blur-xl">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-1 md:px-4 md:py-4">
           <button onClick={() => { navigate("/dashboard"); setMenuOpen(false); }} className="text-left">
-            <p className="text-xs uppercase tracking-[0.35em] text-blue-200 hidden sm:block">Матурски квиз</p>
-            <h1 className="text-sm font-black md:text-xl">Електротехничар рачунара</h1>
+            <p className="text-xs uppercase tracking-[0.35em] text-blue-200 hidden sm:block">Припрема</p>
+            <h1 className="text-sm font-black md:text-xl">за малу матуру</h1>
           </button>
 
           <nav className="hidden md:flex flex-wrap items-center gap-2 text-sm">
@@ -342,9 +342,9 @@ function Login({ onLogin }: { onLogin: (user: AuthUser) => void }) {
       <div className="grid w-full max-w-5xl overflow-hidden rounded-[2rem] border border-white/15 bg-white/10 shadow-2xl backdrop-blur md:grid-cols-[1.1fr_0.9fr]">
         <div className="p-8 md:p-12">
           <p className="mb-4 text-sm font-bold uppercase tracking-[0.35em] text-blue-200">Припрема за</p>
-          <h1 className="text-4xl font-black leading-tight md:text-6xl">матурски испит</h1>
-          <p className="text-4xl font-black leading-tight md:text-6xl">Електротехничар рачунара.</p>
-          <p className="mt-6 max-w-xl text-lg text-blue-100">Садржај је идентичан приручнику ЗУОВ-а.</p>
+          <h1 className="text-4xl font-black leading-tight md:text-6xl">малу матуру</h1>
+          <p className="text-4xl font-black leading-tight md:text-6xl">Биологија.</p>
+          <p className="mt-6 max-w-xl text-lg text-blue-100">Садржај је идентичан штампаном примерку.</p>
         </div>
         <form onSubmit={submit} className="bg-slate-950/45 p-8 md:p-12">
           <h2 className="text-2xl font-black">Пријава</h2>
@@ -394,13 +394,7 @@ function Dashboard({ user }: { user: AuthUser }) {
     api<DashboardStats>("/dashboard").then(setStats).catch((err) => setError(err.message));
   }, []);
 
-  const defaultSubjects: SubjectScore[] = [
-    { key: "rh",  label: "Рачунарски хардвер",           score: 0, total: 50,  percentage: null },
-    { key: "os",  label: "Оперативни системи",            score: 0, total: 101, percentage: null },
-    { key: "ors", label: "Одржавање рачунарских система", score: 0, total: 49,  percentage: null },
-    { key: "td",  label: "Техничка документација",        score: 0, total: 50,  percentage: null },
-  ];
-
+ 
   return (
     <section>
       <div className="mb-6 rounded-[2rem] border border-white/10 bg-white/10 p-6 md:p-8 shadow-xl backdrop-blur">
@@ -415,20 +409,6 @@ function Dashboard({ user }: { user: AuthUser }) {
         <Stat title="Последњи" value={stats?.lastScore == null ? "—" : `${stats.lastScore}%`} />
       </div>
 
-      <div className="mt-4">
-        <h3 className="text-sm font-bold text-blue-200 uppercase tracking-widest mb-3">
-          Резултати по предмету — кликни на предмет за вежбање
-        </h3>
-        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-          {(stats?.subjectScores ?? defaultSubjects).map((s) => (
-            <SubjectCard
-              key={s.key}
-              subject={s}
-              onClick={() => navigate(`/quiz?subject=${s.key}`)}
-            />
-          ))}
-        </div>
-      </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
         <div className="card">
