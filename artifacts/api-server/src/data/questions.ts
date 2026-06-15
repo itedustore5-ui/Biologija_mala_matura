@@ -355,7 +355,7 @@ export const questions: QuizQuestion[] = [
   id: 21,
   type: "slot",
   subject: "biologija",
-  imageQuestion: "21.jpg", slotMulti: true,  points: 2,
+  imageQuestion: "21.jpg",   points: 2,
   question: "Дати су појмови: развиће, сперматозоид, зигот, организам и јајна ћелија. Попуни шему овим појмовима тако да добијеш правилан редослед.",
   slots: ["горње лево поље", "доње лево поље", "средишње поље", "десно поље"],
   slotOptions: ["развиће", "сперматозоид", "зигот", "организам", "јајна ћелија"],
