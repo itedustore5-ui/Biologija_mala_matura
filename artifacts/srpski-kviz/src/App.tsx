@@ -141,11 +141,13 @@ function isAnswerCorrect(question: Question, answer: string): boolean {
       return sel.length === exp.length && sel.every((v, i) => v === exp[i]);
     }
     if (question.type === "fill") {
-      if (Array.isArray(question.correctText)) {
+      const correct = question.correctAnswers ?? question.correctText ?? [];
+      const correctArray = Array.isArray(correct) ? correct : [correct];
+      if (correctArray.length > 1) {
         const parts = answer.split("|").map((s) => s.trim().toLowerCase());
-        return question.correctText.every((c, i) => c.trim().toLowerCase() === (parts[i] ?? ""));
+        return correctArray.every((c, i) => c.trim().toLowerCase() === (parts[i] ?? ""));
       }
-      return answer.trim().toLowerCase() === (question.correctText ?? "").trim().toLowerCase();
+      return answer.trim().toLowerCase() === correctArray[0].trim().toLowerCase();
     }
 if (question.type === "match") {
   const pairs = answer.split(",").map(Number);
@@ -575,7 +577,7 @@ function FillUI({ question, locked, onCommit, onRegisterConfirm }: {
       />
       {locked !== undefined && (
         <p className={`mt-3 font-black text-xs md:text-base ${isAnswerCorrect(question, locked) ? "text-emerald-200" : "text-red-200"}`}>
-          {isAnswerCorrect(question, locked) ? "Тачно" : `Нетачно — тачан одговор: ${Array.isArray(question.correctText) ? question.correctText.join(", ") : question.correctText}`}
+          {isAnswerCorrect(question, locked) ? "Тачно" : `Нетачно — тачан одговор: ${Array.isArray(question.correctAnswers) ? question.correctAnswers.join(", ") : question.correctAnswers}`}
         </p>
       )}
     </div>
@@ -778,7 +780,7 @@ function SlotUI({ question, locked, onCommit, onRegisterConfirm }: {
   const isMulti = question.slotMulti ?? false;
 
   const [selections, setSelections] = useState<Record<number, any>>({});
-  const [multiSelections, setMultiSelections] = useState<Record<number, Set<number>>>({});
+  const [multiSelections, setMultiSelections] = useState<Record<number, Set<string | number>>>({});
   useEffect(() => { setSelections({}); setMultiSelections({}); }, [question.id]);
   useEffect(() => {
     onRegisterConfirm?.(isMulti ? commitMulti : commitDropdown);
@@ -793,7 +795,7 @@ function SlotUI({ question, locked, onCommit, onRegisterConfirm }: {
   const commitDropdown = () => onCommit(slots.map((_, i) => selections[i] ?? "").join(","));
 
   const lockedMultiSlots = locked?.split("|") ?? [];
-  const toggleMulti = (slotIdx: number, opt: number) => {
+  const toggleMulti = (slotIdx: number, opt: string | number) => {
     if (locked !== undefined) return;
     setMultiSelections((prev) => {
       const next = { ...prev };
@@ -806,7 +808,7 @@ function SlotUI({ question, locked, onCommit, onRegisterConfirm }: {
   const multiAllFilled = slots.every((_, i) => (multiSelections[i]?.size ?? 0) > 0);
   const commitMulti = () => {
     const answer = slots.map((_, i) =>
-      [...(multiSelections[i] ?? [])].sort((a, b) => a - b).join(",")
+      [...(multiSelections[i] ?? [])].sort((a, b) => String(a).localeCompare(String(b))).join(",")
     ).join("|");
     onCommit(answer);
   };
@@ -819,9 +821,9 @@ function SlotUI({ question, locked, onCommit, onRegisterConfirm }: {
         <p className="text-xs md:text-sm text-blue-200 -mb-1">Означите бројеве за сваки тип:</p>
         {slots.map((slot, i) => {
           const selectedVals = locked !== undefined
-            ? new Set(lockedMultiSlots[i]?.split(",").map(Number).filter(Boolean) ?? [])
-            : (multiSelections[i] ?? new Set<number>());
-          const correctVals = new Set((correctAns[i]?.[0] ?? "").split(",").map(Number).filter(Boolean));
+            ? new Set(lockedMultiSlots[i]?.split(",").map(v => isNaN(Number(v)) ? v : Number(v)).filter(Boolean) ?? [])
+            : (multiSelections[i] ?? new Set<string | number>());
+          const correctVals = new Set((correctAns[i]?.join(",") ?? "").split(",").map(v => isNaN(Number(v)) ? v : Number(v)).filter(Boolean));
           const isCorrect = locked !== undefined &&
            [...correctVals].every((v) => selectedVals.has(v)) &&
             selectedVals.size === correctVals.size;
@@ -846,7 +848,7 @@ function SlotUI({ question, locked, onCommit, onRegisterConfirm }: {
                   );
                 })}
               </div>
-              {isWrong && <p className="mt-2 text-xs text-red-300">тачно: {correctAns[i]?.[0]}</p>}
+              {isWrong && <p className="mt-2 text-xs text-red-300">тачно: {correctAns[i]?.join(", ")}</p>}
             </div>
           );
         })}
@@ -858,10 +860,10 @@ function SlotUI({ question, locked, onCommit, onRegisterConfirm }: {
   return (
     <div className="mt-4 grid gap-2 md:gap-3">
       <p className="text-xs md:text-sm text-blue-200 -mb-1">Изаберите редни број модула за сваки слот:</p>
-      {slots.map((slot, i) => {
+        {slots.map((slot, i) => {
         const val = locked !== undefined ? lockedSelections[i] : selections[i];
-        // FIX 2: koristi Number(val) da bi poređenje string/number uvek bilo ispravno
-        const isCorrect = locked !== undefined && correctAns.some((ca) => Number(ca[i]) === Number(val));
+        // FIX: proper comparison for slot answers (supports both strings and numbers)
+        const isCorrect = locked !== undefined && correctAns.some((ca) => ca[i] === val);
         const isWrong = locked !== undefined && !isCorrect;
         return (
           <div key={i} className={`flex items-center gap-3 rounded-2xl border p-2 md:p-3 ${isCorrect ? "border-emerald-400/40 bg-emerald-500/15" : isWrong ? "border-red-400/40 bg-red-500/15" : "border-white/10 bg-white/5"}`}>
@@ -877,7 +879,7 @@ function SlotUI({ question, locked, onCommit, onRegisterConfirm }: {
                <option key={opt} value={opt}>{opt === 0 ? "X" : opt}</option>
               ))}
             </select>
-            {isWrong && <span className="text-xs text-red-300">тачно: {correctAns[0]?.[i]}</span>}
+            {isWrong && <span className="text-xs text-red-300">тачно: {correctAns.map(ca => ca[i]).filter((v, i, a) => a.indexOf(v) === i).join(" / ")}</span>}
           </div>
         );
       })}
