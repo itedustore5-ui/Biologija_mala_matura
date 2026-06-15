@@ -575,7 +575,7 @@ function FillUI({ question, locked, onCommit, onRegisterConfirm }: {
       />
       {locked !== undefined && (
         <p className={`mt-3 font-black text-xs md:text-base ${isAnswerCorrect(question, locked) ? "text-emerald-200" : "text-red-200"}`}>
-          {isAnswerCorrect(question, locked) ? "Тачно" : `Нетачно — тачан одговор: ${Array.isArray(question.correctText) ? question.correctText.join(", ") : question.correctText}`}
+          {isAnswerCorrect(question, locked) ? "Тачно" : `Нетачно — тачан одговор: ${Array.isArray(question.correctAnswers) ? question.correctAnswers.join(", ") : question.correctAnswers}`}
         </p>
       )}
     </div>
