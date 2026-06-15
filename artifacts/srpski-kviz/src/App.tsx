@@ -163,7 +163,7 @@ if (question.type === "slot") {
     const userVals = answer.split(",");
     return (question.correctSlotAnswers ?? []).every((ca, i) => ca[0] === userVals[i]);
   }
-   
+ }  
 }
 
 function useAuth() {
