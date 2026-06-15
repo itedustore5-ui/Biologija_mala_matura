@@ -166,29 +166,28 @@ if (question.type === "match") {
     vals.every((v, i) => v === correct[i])
   );
 }
-    if (question.type === "slot") {
-      if (question.slotMulti) {
-        const userSlots = answer.split("|").map((s) => new Set(s.split(",").map(Number).filter(Boolean)));
-        const correctSlots = (question.correctSlotAnswers ?? []).map((ca) =>
-          new Set(ca[0].split(",").map(Number).filter(Boolean))
-        );
-        if (userSlots.length !== correctSlots.length) return false;
-        return correctSlots.every(
-          (correct, i) =>
-            correct.size === userSlots[i]?.size &&
-            [...correct].every((v) => userSlots[i]?.has(v))
-        );
-      } else {
-        // FIX 1: obični slot — poredi svaki odgovor sa correctSlotAnswers
-        const userVals = answer.split(",");
-        // For non-multi mode, check if each slot's value matches the correct answer for that slot
-        return (question.correctSlotAnswers ?? []).every((ca, i) => ca[0] === userVals[i]);
-      }
-    }
-  } catch { return false; }
+   if (question.type === "slot") {
+  const normalize = (v: string | number) => String(v).trim().toLowerCase();
+  if (question.slotMulti) {
+    const userSlots = answer.split("|").map((s) => new Set(s.split(",").map(Number).filter(Boolean)));
+    const correctSlots = (question.correctSlotAnswers ?? []).map((ca) =>
+      new Set(ca[0].split(",").map(Number).filter(Boolean))
+    );
+    if (userSlots.length !== correctSlots.length) return false;
+    return correctSlots.every(
+      (correct, i) =>
+        correct.size === userSlots[i]?.size &&
+        [...correct].every((v) => userSlots[i]?.has(v))
+    );
+  } else {
+    const userVals = answer.split(",");
+    return (question.correctSlotAnswers ?? []).some(combo =>
+      combo.every((ans, i) => normalize(userVals[i]) === normalize(ans))
+    );
+  }
+} } catch { return false; }
   return false;
 }
-
 function useAuth() {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
