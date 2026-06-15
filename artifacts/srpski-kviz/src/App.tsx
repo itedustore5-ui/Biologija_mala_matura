@@ -815,38 +815,34 @@ function SlotUI({ question, locked, onCommit, onRegisterConfirm }: {
     return (
       <div className="mt-4 grid gap-3">
         <p className="text-xs md:text-sm text-blue-200 -mb-1">Означите бројеве за сваки тип:</p>
-        {slots.map((slot, i) => {
-          const selectedVals = locked !== undefined
-            ? new Set(lockedMultiSlots[i]?.split(",").map((v) => (isNaN(Number(v)) ? v : Number(v))).filter(Boolean) ?? [])
-            : (multiSelections[i] ?? new Set<string | number>());
-          const correctVals = new Set((correctAns[i]?.[0] ?? "").split(",").map((v) => (isNaN(Number(v)) ? v : Number(v))).filter(Boolean));
-          const isCorrect = locked !== undefined &&
-           [...correctVals].every((v) => selectedVals.has(v)) &&
-             selectedVals.size === correctVals.size;
-          const isWrong = locked !== undefined && !isCorrect;
-          return (
-            <div key={i} className={`rounded-2xl border p-3 ${isCorrect ? "border-emerald-400/40 bg-emerald-500/15" : isWrong ? "border-red-400/40 bg-red-500/15" : "border-white/10 bg-white/5"}`}>
-              <p className="text-xs md:text-sm font-bold text-blue-200 mb-2">{slot}</p>
-              <div className="flex flex-wrap gap-2">
-                {options.map((opt) => {
-                  const isSelected = selectedVals.has(opt);
-                  return (
-                    <button
-                      key={opt}
-                      disabled={locked !== undefined}
-                      onClick={() => toggleMulti(i, opt)}
-                      className={`rounded-xl border px-3 py-1.5 text-xs md:text-sm font-bold transition ${
-                        isSelected ? "border-white bg-white/25 text-white" : "border-white/20 bg-white/5 text-blue-200"
-                      }`}
-                    >
-                      {opt}
-                    </button>
-                  );
-                })}
-              </div>
-              {isWrong && <p className="mt-2 text-xs text-red-300">тачно: {correctAns[i]?.[0]}</p>}
-            </div>
-          );
+       {slots.map((slot, i) => {
+        const normalize = (v: string | number) => String(v).trim().toLowerCase();
+        const val = locked !== undefined ? lockedSelections[i] : selections[i];
+        const isCorrect = locked !== undefined &&
+          (correctAns ?? []).some(combo => normalize(combo[i]) === normalize(val ?? ""));
+        const isWrong = locked !== undefined && !isCorrect;
+        const matchedCombo = locked !== undefined
+          ? (correctAns ?? []).find(combo =>
+              combo.every((ans, j) => normalize(lockedSelections[j] ?? "") === normalize(ans))
+            ) ?? correctAns[0]
+          : null;
+        return (
+          <div key={i} className={`flex items-center gap-3 rounded-2xl border p-2 md:p-3 ${isCorrect ? "border-emerald-400/40 bg-emerald-500/15" : isWrong ? "border-red-400/40 bg-red-500/15" : "border-white/10 bg-white/5"}`}>
+            <span className="w-20 shrink-0 text-xs md:text-sm font-bold text-blue-200">{slot}</span>
+            <select
+              className="rounded-xl border border-white/20 bg-slate-800 px-2 py-1.5 text-white text-xs md:text-sm"
+              value={val ?? ""}
+              disabled={locked !== undefined}
+              onChange={(e) => setSelections((prev) => ({ ...prev, [i]: e.target.value as any }))}
+            >
+              <option value="">—</option>
+              {options.map((opt) => (
+               <option key={opt} value={opt}>{opt === 0 ? "X" : opt}</option>
+              ))}
+            </select>
+            {isWrong && <span className="text-xs text-red-300">тачно: {matchedCombo?.[i]}</span>}
+          </div>
+                        );
         })}
         {/* Potvrdi is in the bottom bar */}
       </div>
