@@ -166,9 +166,10 @@ if (question.type === "match") {
     vals.every((v, i) => v === correct[i])
   );
 }
-    if (question.slotMulti) {
-  const userSlots = answer.split("|").map((s) => 
-    new Set(s.split(",").filter(Boolean))  // без map(Number)
+   if (question.slotMulti) {
+  const userSlots = answer.split("|").map((s) => new Set(s.split(",").filter(Boolean)));
+  const correctSlots = (question.correctSlotAnswers ?? []).map((ca) =>
+    new Set(ca[0].split(",").filter(Boolean))
   );
   const correctSlots = (question.correctSlotAnswers ?? []).map((ca) =>
     new Set(ca[0].split(",").filter(Boolean))  // без map(Number)
@@ -819,9 +820,9 @@ function SlotUI({ question, locked, onCommit, onRegisterConfirm }: {
         <p className="text-xs md:text-sm text-blue-200 -mb-1">Означите бројеве за сваки тип:</p>
         {slots.map((slot, i) => {
           const selectedVals = locked !== undefined
-            ? new Set(lockedMultiSlots[i]?.split(",").filter(Boolean) ?? [])
-            : (multiSelections[i] ?? new Set<string | number>());
-          const correctVals = new Set((correctAns[i]?.[0] ?? "").split(",").filter(Boolean))
+  ? new Set(lockedMultiSlots[i]?.split(",").filter(Boolean) ?? [])
+  : (multiSelections[i] ?? new Set<string | number>());
+const correctVals = new Set((correctAns[i]?.[0] ?? "").split(",").filter(Boolean));
           const isCorrect = locked !== undefined &&
            [...correctVals].every((v) => selectedVals.has(v)) &&
              selectedVals.size === correctVals.size;
