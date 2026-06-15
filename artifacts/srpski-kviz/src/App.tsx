@@ -141,13 +141,11 @@ function isAnswerCorrect(question: Question, answer: string): boolean {
       return sel.length === exp.length && sel.every((v, i) => v === exp[i]);
     }
     if (question.type === "fill") {
-      const correct = question.correctAnswers ?? question.correctText ?? [];
-      const correctArray = Array.isArray(correct) ? correct : [correct];
-      if (correctArray.length > 1) {
+      if (Array.isArray(question.correctText)) {
         const parts = answer.split("|").map((s) => s.trim().toLowerCase());
-        return correctArray.every((c, i) => c.trim().toLowerCase() === (parts[i] ?? ""));
+        return question.correctText.every((c, i) => c.trim().toLowerCase() === (parts[i] ?? ""));
       }
-      return answer.trim().toLowerCase() === correctArray[0].trim().toLowerCase();
+      return answer.trim().toLowerCase() === (question.correctText ?? "").trim().toLowerCase();
     }
 if (question.type === "match") {
   const pairs = answer.split(",").map(Number);
