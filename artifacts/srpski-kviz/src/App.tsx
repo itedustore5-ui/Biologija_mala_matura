@@ -141,11 +141,14 @@ function isAnswerCorrect(question: Question, answer: string): boolean {
       return sel.length === exp.length && sel.every((v, i) => v === exp[i]);
     }
     if (question.type === "fill") {
-      if (Array.isArray(question.correctText)) {
+      const correct = question.correctAnswers ?? question.correctText ?? [];
+      const correctArray = Array.isArray(correct) ? correct : [correct];
+      const correctStr = correctArray.map(c => String(c).trim().toLowerCase());
+      if (correctStr.length > 1) {
         const parts = answer.split("|").map((s) => s.trim().toLowerCase());
-        return question.correctText.every((c, i) => c.trim().toLowerCase() === (parts[i] ?? ""));
+        return correctStr.every((c, i) => c === (parts[i] ?? ""));
       }
-      return answer.trim().toLowerCase() === (question.correctText ?? "").trim().toLowerCase();
+      return answer.trim().toLowerCase() === correctStr[0];
     }
 if (question.type === "match") {
   const pairs = answer.split(",").map(Number);
@@ -575,7 +578,7 @@ function FillUI({ question, locked, onCommit, onRegisterConfirm }: {
       />
       {locked !== undefined && (
         <p className={`mt-3 font-black text-xs md:text-base ${isAnswerCorrect(question, locked) ? "text-emerald-200" : "text-red-200"}`}>
-          {isAnswerCorrect(question, locked) ? "Тачно" : `Нетачно — тачан одговор: ${Array.isArray(question.correctText) ? question.correctText.join(", ") : question.correctText}`}
+          {isAnswerCorrect(question, locked) ? "Тачно" : `Нетачно — тачан одговор: ${Array.isArray(question.correctAnswers) ? question.correctAnswers.join(", ") : question.correctAnswers}`}
         </p>
       )}
     </div>
@@ -860,8 +863,9 @@ function SlotUI({ question, locked, onCommit, onRegisterConfirm }: {
       <p className="text-xs md:text-sm text-blue-200 -mb-1">Изаберите редни број модула за сваки слот:</p>
         {slots.map((slot, i) => {
         const val = locked !== undefined ? lockedSelections[i] : selections[i];
-        // FIX: proper comparison for slot answers (supports both strings and numbers)
-        const isCorrect = locked !== undefined && correctAns.some((ca) => ca[i] === val);
+        // FIX: proper comparison for slot answers - check ALL valid combinations for this slot
+        const validValuesForSlot = Array.from(new Set(correctAns.map(ca => ca[i])));
+        const isCorrect = locked !== undefined && validValuesForSlot.includes(val);
         const isWrong = locked !== undefined && !isCorrect;
         return (
           <div key={i} className={`flex items-center gap-3 rounded-2xl border p-2 md:p-3 ${isCorrect ? "border-emerald-400/40 bg-emerald-500/15" : isWrong ? "border-red-400/40 bg-red-500/15" : "border-white/10 bg-white/5"}`}>
