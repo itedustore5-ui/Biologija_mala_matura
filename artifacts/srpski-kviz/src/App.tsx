@@ -147,33 +147,23 @@ function isAnswerCorrect(question: Question, answer: string): boolean {
       }
       return answer.trim().toLowerCase() === (question.correctText ?? "").trim().toLowerCase();
     }
-if (question.type === "match") {
-  const pairs = answer.split(",").map(Number);
-  const correct = question.correctPairs ?? [];
-  if (Array.isArray(correct[0])) {
-    return (correct as (number | string)[][]).some((combo) =>
-      pairs.every((v, i) => v === Number(combo[i]))
+if (question.type === "slot") {
+  if (question.slotMulti) {
+    const userSlots = answer.split("|").map((s) => new Set(s.split(",").filter(Boolean)));
+    const correctSlots = (question.correctSlotAnswers ?? []).map((ca) =>
+      new Set(ca[0].split(",").filter(Boolean))
     );
+    if (userSlots.length !== correctSlots.length) return false;
+    return correctSlots.every(
+      (correct, i) =>
+        correct.size === userSlots[i]?.size &&
+        [...correct].every((v) => userSlots[i]?.has(v))
+    );
+  } else {
+    const userVals = answer.split(",");
+    return (question.correctSlotAnswers ?? []).every((ca, i) => ca[0] === userVals[i]);
   }
-  return pairs.every((v, i) => v === Number(correct[i]));
-}
-    if (question.slotMulti) {
-  const userSlots = answer.split("|").map((s) => new Set(s.split(",").filter(Boolean)));
-  const correctSlots = (question.correctSlotAnswers ?? []).map((ca) =>
-    new Set(ca[0].split(",").filter(Boolean))
-  );
-  if (userSlots.length !== correctSlots.length) return false;
-  return correctSlots.every(
-    (correct, i) =>
-      correct.size === userSlots[i]?.size &&
-      [...correct].every((v) => userSlots[i]?.has(v))
-  );
-} else {
-  const userVals = answer.split(",");
-  return (question.correctSlotAnswers ?? []).every((ca, i) => ca[0] === userVals[i]);
-    }
-   catch { return false; }
-  return false;
+   
 }
 
 function useAuth() {
