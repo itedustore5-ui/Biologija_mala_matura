@@ -830,34 +830,34 @@ function SlotUI({ question, locked, onCommit, onRegisterConfirm }: {
   }
 
   return (
-    <div className="mt-4 grid gap-2 md:gap-3">
-      <p className="text-xs md:text-sm text-blue-200 -mb-1">Изаберите редни број модула за сваки слот:</p>
-      {slots.map((slot, i) => {
-        const val = locked !== undefined ? lockedSelections[i] : selections[i];
-        // FIX: Check if the current slot's value matches the correct answer for that slot
-        const isCorrect = locked !== undefined && correctAns[i]?.[0] === val;
-        const isWrong = locked !== undefined && !isCorrect;
-        return (
-          <div key={i} className={`flex items-center gap-3 rounded-2xl border p-2 md:p-3 ${isCorrect ? "border-emerald-400/40 bg-emerald-500/15" : isWrong ? "border-red-400/40 bg-red-500/15" : "border-white/10 bg-white/5"}`}>
-            <span className="w-20 shrink-0 text-xs md:text-sm font-bold text-blue-200">{slot}</span>
+  <div className="mt-4 grid gap-2 md:gap-3">
+    <p className="text-xs md:text-sm text-blue-200 -mb-1">Изаберите редни број модула за сваки слот:</p>
+    {slots.map((slot, i) => {
+      const val = locked !== undefined ? lockedSelections[i] : selections[i];
+      const isCorrect = locked !== undefined && correctAns[i]?.[0] === val;
+      const isWrong = locked !== undefined && !isCorrect;
+      return (
+        <div key={i} className={`grid grid-cols-[1fr_auto] gap-2 rounded-2xl border p-2 md:p-3 ${isCorrect ? "border-emerald-400/40 bg-emerald-500/15" : isWrong ? "border-red-400/40 bg-red-500/15" : "border-white/10 bg-white/5"}`}>
+          <span className="text-xs md:text-sm font-bold text-blue-200 self-center">{slot}</span>
+          <div className="flex flex-col items-center gap-1">
             <select
-              className="rounded-xl border border-white/20 bg-slate-800 px-2 py-1.5 text-white text-xs md:text-sm"
+              className="rounded-xl border border-white/20 bg-slate-800 px-2 py-1.5 text-white text-xs md:text-sm w-full"
               value={val ?? ""}
               disabled={locked !== undefined}
               onChange={(e) => setSelections((prev) => ({ ...prev, [i]: e.target.value as any }))}
             >
               <option value="">—</option>
               {options.map((opt) => (
-               <option key={opt} value={opt}>{opt === 0 ? "X" : opt}</option>
+                <option key={opt} value={opt}>{opt === 0 ? "X" : opt}</option>
               ))}
             </select>
-            {isWrong && <span className="text-xs text-red-300">тачно: {correctAns[i]?.[0]}</span>}
+            {isWrong && <span className="text-xs text-red-300 text-center">тачно: {correctAns[i]?.[0]}</span>}
           </div>
-        );
-      })}
-      {/* Potvrdi is in the bottom bar */}
-    </div>
-  );
+        </div>
+      );
+    })}
+  </div>
+);
 }
 
 function QuizPage() {
