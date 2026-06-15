@@ -268,12 +268,12 @@ function Shell({ user, onLogout, children }: { user: AuthUser; onLogout: () => v
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-3 py-1 md:px-4 md:py-4">
           <button onClick={() => { navigate("/dashboard"); setMenuOpen(false); }} className="text-left">
             <p className="text-xs uppercase tracking-[0.35em] text-blue-200 hidden sm:block">Припрема</p>
-            <h1 className="text-sm font-black md:text-xl">за малу матуру</h1>
+            <h1 className="text-sm font-black md:text-xl">из Биологије за малу матуру</h1>
           </button>
 
           <nav className="hidden md:flex flex-wrap items-center gap-2 text-sm">
             <button className="nav-btn" onClick={() => navigate("/dashboard")}>Dashboard</button>
-            <button className="nav-btn" onClick={() => navigate("/quiz")}>Квиз</button>
+            <button className="nav-btn" onClick={() => navigate("/quiz")}>Почни припрему</button>
             <button className="nav-btn" onClick={() => navigate("/scoreboard")}>Scoreboard</button>
             {user.role === "admin" && <button className="nav-btn" onClick={() => navigate("/admin")}>Admin</button>}
             <span className="rounded-full border border-white/15 px-3 py-2 text-blue-100">{user.fullName}</span>
@@ -412,13 +412,13 @@ function Dashboard({ user }: { user: AuthUser }) {
 
       <div className="mt-4 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
         <div className="card">
-          <h3 className="text-xl md:text-2xl font-black">Квиз — сва питања</h3>
+          <h3 className="text-xl md:text-2xl font-black">Питања</h3>
           <p className="mt-2 text-sm md:text-base text-blue-100">
-            Можете се враћати на претходна питања, али већ одговорена питања остају закључана.
+            Можете се враћати на претходна питања, али већ одговорена питања остају закључана док се пролази.
           </p>
           {stats?.canTakeQuiz ? (
             <button className="primary mt-4 md:mt-6 w-full md:w-auto" onClick={() => navigate("/quiz")}>
-              Почни квиз (сва питања)
+              Почни са припремом
             </button>
           ) : (
             <p className="mt-4 rounded-2xl border border-amber-300/30 bg-amber-400/15 p-4 text-amber-100 text-sm">
@@ -1172,15 +1172,7 @@ function Scoreboard({ user }: { user: AuthUser }) {
               Укупни scoreboard
             </button>
           )}
-          {SUBJECTS.map((s) => (
-            <button
-              key={s.key}
-              className={`text-sm ${subjectKey === s.key ? "primary" : "secondary"}`}
-              onClick={() => navigate(`/scoreboard?subject=${s.key}`)}
-            >
-              {s.label.split(" ")[0]}
-            </button>
-          ))}
+        
         </div>
       </div>
       <div className="overflow-x-auto">
