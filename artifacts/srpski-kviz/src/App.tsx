@@ -133,61 +133,54 @@ function shuffle<T>(arr: T[]): T[] {
 }
 
 function isAnswerCorrect(question: Question, answer: string): boolean {
-  try {
-    if (question.type === "single") return Number(answer) === question.correctAnswer;
-    if (question.type === "multi") {
-      const sel = answer.split(",").map(Number).sort((a, b) => a - b);
-      const exp = [...(question.correctAnswers ?? [])].sort((a, b) => a - b);
-      return sel.length === exp.length && sel.every((v, i) => v === exp[i]);
+  if (question.type === "single") return Number(answer) === question.correctAnswer;
+  if (question.type === "multi") {
+    const sel = answer.split(",").map(Number).sort((a, b) => a - b);
+    const exp = [...(question.correctAnswers ?? [])].sort((a, b) => a - b);
+    return sel.length === exp.length && sel.every((v, i) => v === exp[i]);
+  }
+  if (question.type === "fill") {
+    if (Array.isArray(question.correctText)) {
+      const parts = answer.split("|").map((s) => s.trim().toLowerCase());
+      return question.correctText.every((c, i) => c.trim().toLowerCase() === (parts[i] ?? ""));
     }
-    if (question.type === "fill") {
-      if (Array.isArray(question.correctText)) {
-        const parts = answer.split("|").map((s) => s.trim().toLowerCase());
-        return question.correctText.every((c, i) => c.trim().toLowerCase() === (parts[i] ?? ""));
-      }
-      return answer.trim().toLowerCase() === (question.correctText ?? "").trim().toLowerCase();
+    return answer.trim().toLowerCase() === (question.correctText ?? "").trim().toLowerCase();
+  }
+  if (question.type === "match") {
+    const pairs = answer.split(",").map(Number);
+    const correct = question.correctPairs ?? [];
+    if (Array.isArray(correct[0])) {
+      return (correct as (number | string)[][]).some((combo) =>
+        pairs.every((v, i) => v === Number(combo[i]))
+      );
     }
-if (question.type === "match") {
-  const pairs = answer.split(",").map(Number);
-  const correct = question.correctPairs ?? [];
-  if (Array.isArray(correct[0])) {
-    return (correct as (number | string)[][]).some((combo) =>
-      pairs.every((v, i) => v === Number(combo[i]))
+    return pairs.every((v, i) => v === Number(correct[i]));
+  }
+  if (question.type === "order") {
+    const vals = answer.split(",").map(Number);
+    const correct = (question.correctOrder ?? []).map((v) => Number(v));
+    return (
+      vals.length === correct.length &&
+      vals.every((v, i) => v === correct[i])
     );
   }
-  return pairs.every((v, i) => v === Number(correct[i]));
-}
-    if (question.type === "order") {
-  const vals = answer.split(",").map(Number);
-  const correct = (question.correctOrder ?? []).map((v) => Number(v));
-
-  return (
-    vals.length === correct.length &&
-    vals.every((v, i) => v === correct[i])
-  );
-}
-   if (question.type === "slot") {
+  if (question.type === "slot") {
     if (question.slotMulti) {
-  const userSlots = answer.split("|").map((s) => 
-    new Set(s.split(",").filter(Boolean))
-  );
-  const correctSlots = (question.correctSlotAnswers ?? []).map((ca) =>
-    new Set(ca[0].split(",").filter(Boolean))  // без map(Number)
-  );
-  if (userSlots.length !== correctSlots.length) return false;
-  return correctSlots.every(
-    (correct, i) =>
-      correct.size === userSlots[i]?.size &&
-      [...correct].every((v) => userSlots[i]?.has(v))
-  );
-      } else {
-        // FIX 1: obični slot — poredi svaki odgovor sa correctSlotAnswers
-        const userVals = answer.split(",");
-        // For non-multi mode, check if each slot's value matches the correct answer for that slot
-        return (question.correctSlotAnswers ?? []).every((ca, i) => ca[0] === userVals[i]);
-      }
+      const userSlots = answer.split("|").map((s) => new Set(s.split(",").filter(Boolean)));
+      const correctSlots = (question.correctSlotAnswers ?? []).map((ca) =>
+        new Set(ca[0].split(",").filter(Boolean))
+      );
+      if (userSlots.length !== correctSlots.length) return false;
+      return correctSlots.every(
+        (correct, i) =>
+          correct.size === userSlots[i]?.size &&
+          [...correct].every((v) => userSlots[i]?.has(v))
+      );
+    } else {
+      const userVals = answer.split(",");
+      return (question.correctSlotAnswers ?? []).every((ca, i) => ca[0] === userVals[i]);
     }
-   catch { return false; }
+  }
   return false;
 }
 
