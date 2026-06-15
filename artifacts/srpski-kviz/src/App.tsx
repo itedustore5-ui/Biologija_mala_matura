@@ -166,9 +166,10 @@ if (question.type === "match") {
     vals.every((v, i) => v === correct[i])
   );
 }
+   if (question.type === "slot") {
     if (question.slotMulti) {
   const userSlots = answer.split("|").map((s) => 
-    new Set(s.split(",").filter(Boolean))  // без map(Number)
+    new Set(s.split(",").filter(Boolean))
   );
   const correctSlots = (question.correctSlotAnswers ?? []).map((ca) =>
     new Set(ca[0].split(",").filter(Boolean))  // без map(Number)
