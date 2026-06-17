@@ -41,7 +41,9 @@ export type SlotQ = {
 export type MatrixQ = {
   id: number; type: "matrix"; subject: string; points: number;
   question: string; matrixRows: string[]; matrixColumns: string[];
-  correctMatrixAnswers: number[];
+  correctMatrixAnswers?: number[];
+  matrixMulti?: boolean;
+  correctMatrixAnswersMulti?: number[][];
   explanation: string; imageQuestion?: boolean;
 };
 export type QuizQuestion = SingleQ | MultiQ | FillQ | MatchQ | OrderQ| SlotQ| MatrixQ;
@@ -89,13 +91,17 @@ export const questions: QuizQuestion[] = [
   },
 
  {
-  id: 2, type: "matrix", subject: "biologija",
-  imageQuestion: null, points: 2,
-  question: "Обој кружић (изабери) у одговарајућем пољу тако да повежеш примере живе и неживе природе",
-  matrixRows: ["квасац", "кухињска со", "шећер", "камилица"],
-  matrixColumns: ["Жива природа", "Нежива природа"],
-  correctMatrixAnswers: [0, 1, 1, 0],
-  explanation: "Квасац и камилица су живи организми. Кухињска со и шећер су неживе материје.",
+  id: 3, type: "matrix", subject: "biologija", points: 2,
+  question: "Означи које карактеристике важе за свако царство живих бића (могуће више тачних по реду)",
+  matrixRows: ["Биљке", "Животиње", "Бактерије"],
+  matrixColumns: ["Фотосинтеза", "Ћелијски зид", "Једноћелијски организам", "Кретање"],
+  matrixMulti: true,
+  correctMatrixAnswersMulti: [
+    [0, 1],       // Биљке: Фотосинтеза + Ћелијски зид
+    [3],          // Животиње: Кретање
+    [1, 2],       // Бактерије: Ћелијски зид + Једноћелијски организам
+  ],
+  explanation: "Биљке имају ћелијски зид и врше фотосинтезу...",
 },
 
   {
