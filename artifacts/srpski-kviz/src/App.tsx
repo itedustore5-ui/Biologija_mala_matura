@@ -20,7 +20,7 @@ type AdminUser = AuthUser & { password: string; createdAt: string };
 
 type Question = {
   id: number;
-  type: "single" | "multi" | "fill" | "match" | "order" | "slot";
+  type: "single" | "multi" | "fill" | "match" | "order" | "slot" | "matrix";
   question: string;
   explanation: string;
   imageQuestion: string | null;
@@ -40,6 +40,9 @@ type Question = {
   slotOptions?: number[] | string[];
   correctSlotAnswers?: string[][];
   slotMulti?: boolean;
+  matrixRows?: string[];
+  matrixColumns?: string[];
+  correctMatrixAnswers?: number[];
 };
 
 type SubjectScore = {
@@ -181,6 +184,11 @@ function isAnswerCorrect(question: Question, answer: string): boolean {
       return (question.correctSlotAnswers ?? []).every((ca, i) => ca[0] === userVals[i]);
     }
   }
+  if (question.type === "matrix") {
+    const vals = answer.split(",").map(Number);
+    const correct = question.correctMatrixAnswers ?? [];
+    return vals.length === correct.length && vals.every((v, i) => v === correct[i]);
+  }
   return false;
 }
 
@@ -213,7 +221,6 @@ function ImageOverlay({ src, alt, onClose }: { src: string; alt: string; onClose
   useEffect(() => {
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", handler);
-    // Omogući zoom na celoj stranici dok je overlay otvoren
     const viewport = document.querySelector('meta[name="viewport"]');
     const original = viewport?.getAttribute("content") ?? "";
     viewport?.setAttribute("content", "width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes");
@@ -258,6 +265,7 @@ function ImageOverlay({ src, alt, onClose }: { src: string; alt: string; onClose
     </div>
   );
 }
+
 function Shell({ user, onLogout, children }: { user: AuthUser; onLogout: () => void; children: React.ReactNode }) {
   const [, navigate] = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -305,7 +313,6 @@ function Shell({ user, onLogout, children }: { user: AuthUser; onLogout: () => v
         )}
       </header>
 
-      {/* Mobile: px-2 py-2 | Desktop: px-4 py-8 */}
       <main className="mx-auto max-w-7xl px-2 py-2 md:px-4 md:py-8">{children}</main>
     </div>
   );
@@ -394,7 +401,6 @@ function Dashboard({ user }: { user: AuthUser }) {
     api<DashboardStats>("/dashboard").then(setStats).catch((err) => setError(err.message));
   }, []);
 
- 
   return (
     <section>
       <div className="mb-6 rounded-[2rem] border border-white/10 bg-white/10 p-6 md:p-8 shadow-xl backdrop-blur">
@@ -408,7 +414,6 @@ function Dashboard({ user }: { user: AuthUser }) {
         <Stat title="Најбољи" value={`${stats?.bestScore ?? 0}%`} />
         <Stat title="Последњи" value={stats?.lastScore == null ? "—" : `${stats.lastScore}%`} />
       </div>
-
 
       <div className="mt-4 grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
         <div className="card">
@@ -520,7 +525,6 @@ function MultiUI({ question, shuffleMap, locked, onCommit, onRegisterConfirm }: 
           </button>
         );
       })}
-      {/* Potvrdi is in the bottom bar — no duplicate here */}
     </div>
   );
 }
@@ -574,12 +578,10 @@ function MatchUI({ question, locked, onCommit, onRegisterConfirm }: {
     return Object.fromEntries(locked.split(",").map((v, i) => [i, Number(v)]));
   }, [locked, pairs]);
 
-  // FIX: correctPairs može biti number[] ili number[][] (više tačnih kombinacija)
- const cp = question.correctPairs ?? [];
+  const cp = question.correctPairs ?? [];
   const allCombos: number[][] = Array.isArray(cp[0])
     ? (cp as number[][])
     : [(cp as number[])];
-  // Koristi kombinaciju koja odgovara lockedPairs, ili prvu kao fallback
   const firstCombo: number[] = locked
     ? allCombos.find((combo) =>
         combo.every((v, i) => v === lockedPairs[i])
@@ -671,7 +673,6 @@ function MatchUI({ question, locked, onCommit, onRegisterConfirm }: {
           )}
         </div>
       </div>
-      {/* Potvrdi is in the bottom bar */}
     </div>
   );
 }
@@ -736,7 +737,6 @@ function OrderUI({ question, locked, onCommit, onRegisterConfirm }: {
           </div>
         );
       })}
-      {/* Potvrdi is in the bottom bar */}
     </div>
   );
 }
@@ -824,7 +824,6 @@ function SlotUI({ question, locked, onCommit, onRegisterConfirm }: {
             </div>
           );
         })}
-        {/* Potvrdi is in the bottom bar */}
       </div>
     );
   }
@@ -858,6 +857,132 @@ function SlotUI({ question, locked, onCommit, onRegisterConfirm }: {
     })}
   </div>
 );
+}
+
+// ── MatrixUI — radio kružići u tabeli (novi tip pitanja) ──────────────────────
+function MatrixUI({ question, locked, onCommit, onRegisterConfirm }: {
+  question: Question;
+  locked: string | undefined;
+  onCommit: (answer: string) => void;
+  onRegisterConfirm?: (fn: () => void) => void;
+}) {
+  const rows = question.matrixRows ?? [];
+  const cols = question.matrixColumns ?? [];
+  const correct = question.correctMatrixAnswers ?? [];
+
+  const [selections, setSelections] = useState<Record<number, number>>({});
+  useEffect(() => { setSelections({}); }, [question.id]);
+
+  const lockedSelections: Record<number, number> = useMemo(() => {
+    if (!locked) return selections;
+    return Object.fromEntries(locked.split(",").map((v, i) => [i, Number(v)]));
+  }, [locked, selections]);
+
+  const commit = () => {
+    if (!rows.every((_, i) => selections[i] !== undefined)) return;
+    onCommit(rows.map((_, i) => selections[i]).join(","));
+  };
+
+  useEffect(() => { onRegisterConfirm?.(commit); }, [selections, question.id]);
+
+  const pick = (rowIdx: number, colIdx: number) => {
+    if (locked !== undefined) return;
+    setSelections((prev) => ({ ...prev, [rowIdx]: colIdx }));
+  };
+
+  return (
+    <div className="mt-4">
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse">
+          <thead>
+            <tr>
+              <th className="p-2 md:p-3 text-left" />
+              {cols.map((col, ci) => (
+                <th
+                  key={ci}
+                  className="p-2 md:p-3 text-center text-xs md:text-sm font-black text-blue-200 border-b border-white/15 min-w-[80px]"
+                >
+                  {col}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, ri) => {
+              const sel = locked !== undefined ? lockedSelections[ri] : selections[ri];
+              const isRowCorrect = locked !== undefined && sel === correct[ri];
+              const isRowWrong = locked !== undefined && sel !== correct[ri];
+              return (
+                <tr
+                  key={ri}
+                  className={`border-t border-white/10 transition-colors ${
+                    isRowCorrect ? "bg-emerald-500/10" :
+                    isRowWrong   ? "bg-red-500/10" : ""
+                  }`}
+                >
+                  <td className="py-2 md:py-3 pr-3 text-xs md:text-sm text-blue-50 font-medium">
+                    {row}
+                    {isRowWrong && (
+                      <span className="ml-2 text-[10px] text-red-300">
+                        (тачно: {cols[correct[ri]]})
+                      </span>
+                    )}
+                  </td>
+                  {cols.map((_, ci) => {
+                    const isSelected = sel === ci;
+                    const isThisCorrect = locked !== undefined && ci === correct[ri];
+                    const isThisWrong = locked !== undefined && isSelected && ci !== correct[ri];
+                    return (
+                      <td key={ci} className="py-2 md:py-3 text-center">
+                        <button
+                          disabled={locked !== undefined}
+                          onClick={() => pick(ri, ci)}
+                          className="mx-auto flex h-7 w-7 md:h-8 md:w-8 items-center justify-center rounded-full border-2 transition-all"
+                          style={{
+                            borderColor: isThisCorrect ? "#34d399"
+                              : isThisWrong ? "#f87171"
+                              : isSelected ? "white"
+                              : "rgba(255,255,255,0.25)",
+                            background: isThisCorrect ? "rgba(52,211,153,0.2)"
+                              : isThisWrong ? "rgba(248,113,113,0.2)"
+                              : isSelected ? "rgba(255,255,255,0.2)"
+                              : "transparent",
+                          }}
+                          aria-label={`${row} — ${cols[ci]}`}
+                        >
+                          {isSelected && (
+                            <span
+                              className="block h-3 w-3 md:h-3.5 md:w-3.5 rounded-full"
+                              style={{
+                                background: isThisCorrect ? "#34d399"
+                                  : isThisWrong ? "#f87171"
+                                  : "white",
+                              }}
+                            />
+                          )}
+                        </button>
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {locked !== undefined && (
+        <div className="mt-3 rounded-xl border border-white/10 bg-slate-950/35 p-2.5 md:p-4">
+          <p className={`font-black text-xs md:text-base ${
+            isAnswerCorrect(question, locked) ? "text-emerald-200" : "text-red-200"
+          }`}>
+            {isAnswerCorrect(question, locked) ? "Тачно!" : "Нетачно"}
+          </p>
+          <p className="mt-1 md:mt-2 text-xs md:text-sm text-blue-50">{question.explanation}</p>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function QuizPage() {
@@ -956,7 +1081,6 @@ function QuizPage() {
 
   return (
     <section className="mx-auto max-w-5xl pb-16">
-      {/* Fullscreen image overlay */}
       {overlayImg && (
         <ImageOverlay
           src={overlayImg}
@@ -965,7 +1089,6 @@ function QuizPage() {
         />
       )}
 
-      {/* Compact top strip: counter + progress bar + action buttons */}
       <div className="mb-1.5 flex items-center gap-1.5">
         <span className="text-[11px] font-bold text-white whitespace-nowrap">
           {current + 1}/{questions.length}
@@ -993,9 +1116,7 @@ function QuizPage() {
         </button>
       </div>
 
-      {/* Question card — mobile: p-3, desktop: p-6 */}
       <div className="card p-3 md:p-6">
-        {/* Meta badges — mobile smaller */}
         <div className="mb-2 flex flex-wrap items-center gap-1.5 md:gap-2">
           <span className="text-[10px] md:text-sm font-black text-blue-200">#{question.id}</span>
           <span className="rounded-full border border-white/15 bg-white/5 px-1.5 md:px-2 py-0.5 text-[10px] md:text-xs text-blue-300">
@@ -1003,7 +1124,8 @@ function QuizPage() {
               question.type === "multi" ? "Вишеструки одговори" :
               question.type === "fill" ? "Попунити" :
               question.type === "match" ? "Повезивање" :
-              question.type === "slot" ? "Слотови" : "Редослед"}
+              question.type === "slot" ? "Слотови" :
+              question.type === "matrix" ? "Матрица" : "Редослед"}
           </span>
           {question.points != null && (
             <span className="rounded-full border border-yellow-400/30 bg-yellow-400/10 px-1.5 md:px-2 py-0.5 text-[10px] md:text-xs text-yellow-300 font-bold">
@@ -1012,7 +1134,6 @@ function QuizPage() {
           )}
         </div>
 
-        {/* Image — mobile: max-h-32 + click to fullscreen; desktop: max-h-80 */}
         {question.imageQuestion && (
           <div className="mb-3">
             <img
@@ -1023,17 +1144,14 @@ function QuizPage() {
               onClick={() => setOverlayImg(question.imageQuestion!)}
               onError={(e) => { e.currentTarget.style.display = "none"; }}
             />
-            {/* Mobile-only hint */}
             <p className="mt-1 text-center text-[10px] text-blue-400 md:hidden">👆 Кликни за увећање</p>
           </div>
         )}
 
-        {/* Question text — mobile: text-sm font-bold | desktop: text-2xl font-black */}
         <h3 className="text-sm font-bold leading-snug md:text-2xl md:font-black md:leading-relaxed">
           {question.question}
         </h3>
 
-        {/* Answer UIs */}
         {question.type === "single" && (
           <SingleUI question={question} shuffleMap={shuffleMap} locked={locked} onCommit={commit} />
         )}
@@ -1052,9 +1170,11 @@ function QuizPage() {
         {question.type === "slot" && (
           <SlotUI question={question} locked={locked} onCommit={commit} onRegisterConfirm={(fn) => { confirmRef.current = fn; }} />
         )}
+        {question.type === "matrix" && (
+          <MatrixUI question={question} locked={locked} onCommit={commit} onRegisterConfirm={(fn) => { confirmRef.current = fn; }} />
+        )}
 
-        {/* Explanation — mobile: p-2.5 text-xs rounded-xl */}
-        {locked !== undefined && question.type !== "fill" && question.type !== "match" && (
+        {locked !== undefined && question.type !== "fill" && question.type !== "match" && question.type !== "matrix" && (
           <div className="mt-3 md:mt-4 rounded-xl md:rounded-2xl border border-white/10 bg-slate-950/35 p-2.5 md:p-4">
             <p className={`font-black text-xs md:text-base ${isAnswerCorrect(question, locked) ? "text-emerald-200" : "text-red-200"}`}>
               {isAnswerCorrect(question, locked) ? "Тачно!" : "Нетачно"}
@@ -1069,14 +1189,11 @@ function QuizPage() {
         )}
       </div>
 
-      {/* Error */}
       {error && <p className="mt-4 rounded-2xl bg-red-500/20 p-4 text-red-100 text-sm">{error}</p>}
 
-      {/* ── Fixed bottom navigation bar ── */}
       <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-white/10 bg-slate-950/85 backdrop-blur-xl px-3 py-1.5 md:px-6">
         <div className="mx-auto max-w-5xl flex flex-col gap-1">
 
-          {/* Назад / Потврди / Напред */}
           <div className="flex items-center gap-2">
             <button
               className="rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-bold text-blue-200 hover:bg-white/10 transition disabled:opacity-30"
@@ -1118,7 +1235,6 @@ function QuizPage() {
             )}
           </div>
 
-          {/* Progress dots */}
           <div className="flex flex-wrap justify-center gap-0.5">
             {questions.map((item, index) => {
               const ans = answers[item.id];
@@ -1172,7 +1288,6 @@ function Scoreboard({ user }: { user: AuthUser }) {
               Укупни scoreboard
             </button>
           )}
-        
         </div>
       </div>
       <div className="overflow-x-auto">
@@ -1319,7 +1434,7 @@ function AppRouter() {
   const auth = useAuth();
   return (
     <Switch>
-      <Route path="/demo">{() => <DemoPage />}</Route> 
+      <Route path="/demo">{() => <DemoPage />}</Route>
       <Route path="/login">{() => <Login onLogin={auth.setUser} />}</Route>
       <Route path="/">{() => <Protected auth={auth}><Dashboard user={auth.user!} /></Protected>}</Route>
       <Route path="/dashboard">{() => <Protected auth={auth}><Dashboard user={auth.user!} /></Protected>}</Route>
