@@ -38,7 +38,13 @@ export type SlotQ = {
   correctAnswers: number[][];
   explanation: string; imageQuestion?: boolean;
 };
-export type QuizQuestion = SingleQ | MultiQ | FillQ | MatchQ | OrderQ| SlotQ;
+export type MatrixQ = {
+  id: number; type: "matrix"; subject: string; points: number;
+  question: string; matrixRows: string[]; matrixColumns: string[];
+  correctMatrixAnswers: number[];
+  explanation: string; imageQuestion?: boolean;
+};
+export type QuizQuestion = SingleQ | MultiQ | FillQ | MatchQ | OrderQ| SlotQ| MatrixQ;
 
 export const questions: QuizQuestion[] = [
 
