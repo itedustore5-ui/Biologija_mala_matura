@@ -43,6 +43,8 @@ type Question = {
   matrixRows?: string[];
   matrixColumns?: string[];
   correctMatrixAnswers?: number[];
+  matrixMulti?: boolean;
+  correctMatrixAnswersMulti?: number[][];
 };
 
 type SubjectScore = {
@@ -184,7 +186,17 @@ function isAnswerCorrect(question: Question, answer: string): boolean {
       return (question.correctSlotAnswers ?? []).every((ca, i) => ca[0] === userVals[i]);
     }
   }
-  if (question.type === "matrix") {
+ if (question.type === "matrix") {
+    if (question.matrixMulti) {
+      const userRows = answer.split("|").map((s) => new Set(s.split(",").filter(Boolean).map(Number)));
+      const correctRows = question.correctMatrixAnswersMulti ?? [];
+      if (userRows.length !== correctRows.length) return false;
+      return correctRows.every(
+        (correct, i) =>
+          correct.length === userRows[i]?.size &&
+          correct.every((v) => userRows[i]?.has(v))
+      );
+    }
     const vals = answer.split(",").map(Number);
     const correct = question.correctMatrixAnswers ?? [];
     return vals.length === correct.length && vals.every((v, i) => v === correct[i]);
@@ -860,6 +872,7 @@ function SlotUI({ question, locked, onCommit, onRegisterConfirm }: {
 }
 
 // ── MatrixUI — radio kružići u tabeli (novi tip pitanja) ──────────────────────
+// ── MatrixUI — radio/checkbox kružići u tabeli ────────────────────────────
 function MatrixUI({ question, locked, onCommit, onRegisterConfirm }: {
   question: Question;
   locked: string | undefined;
@@ -868,30 +881,62 @@ function MatrixUI({ question, locked, onCommit, onRegisterConfirm }: {
 }) {
   const rows = question.matrixRows ?? [];
   const cols = question.matrixColumns ?? [];
-  const correct = question.correctMatrixAnswers ?? [];
+  const isMulti = question.matrixMulti ?? false;
+  const correctSingle = question.correctMatrixAnswers ?? [];
+  const correctMulti = question.correctMatrixAnswersMulti ?? [];
 
+  // single-select stanje
   const [selections, setSelections] = useState<Record<number, number>>({});
-  useEffect(() => { setSelections({}); }, [question.id]);
+  // multi-select stanje
+  const [multiSelections, setMultiSelections] = useState<Record<number, Set<number>>>({});
+
+  useEffect(() => { setSelections({}); setMultiSelections({}); }, [question.id]);
 
   const lockedSelections: Record<number, number> = useMemo(() => {
-    if (!locked) return selections;
+    if (!locked || isMulti) return selections;
     return Object.fromEntries(locked.split(",").map((v, i) => [i, Number(v)]));
-  }, [locked, selections]);
+  }, [locked, selections, isMulti]);
 
-  const commit = () => {
+  const lockedMultiRows = locked?.split("|") ?? [];
+
+  const commitSingle = () => {
     if (!rows.every((_, i) => selections[i] !== undefined)) return;
     onCommit(rows.map((_, i) => selections[i]).join(","));
   };
 
-  useEffect(() => { onRegisterConfirm?.(commit); }, [selections, question.id]);
+  const commitMulti = () => {
+    if (!rows.every((_, i) => (multiSelections[i]?.size ?? 0) > 0)) return;
+    const answer = rows.map((_, i) =>
+      [...(multiSelections[i] ?? [])].sort((a, b) => a - b).join(",")
+    ).join("|");
+    onCommit(answer);
+  };
 
-  const pick = (rowIdx: number, colIdx: number) => {
+  useEffect(() => {
+    onRegisterConfirm?.(isMulti ? commitMulti : commitSingle);
+  }, [selections, multiSelections, question.id, isMulti]);
+
+  const pickSingle = (rowIdx: number, colIdx: number) => {
     if (locked !== undefined) return;
     setSelections((prev) => ({ ...prev, [rowIdx]: colIdx }));
   };
 
+  const toggleMulti = (rowIdx: number, colIdx: number) => {
+    if (locked !== undefined) return;
+    setMultiSelections((prev) => {
+      const next = { ...prev };
+      const set = new Set(next[rowIdx] ?? []);
+      set.has(colIdx) ? set.delete(colIdx) : set.add(colIdx);
+      next[rowIdx] = set;
+      return next;
+    });
+  };
+
   return (
     <div className="mt-4">
+      {isMulti && (
+        <p className="mb-2 text-xs md:text-sm text-blue-200">Можете изабрати више кружића по реду:</p>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full border-collapse">
           <thead>
@@ -909,9 +954,75 @@ function MatrixUI({ question, locked, onCommit, onRegisterConfirm }: {
           </thead>
           <tbody>
             {rows.map((row, ri) => {
+              if (isMulti) {
+                const selectedVals = locked !== undefined
+                  ? new Set((lockedMultiRows[ri] ?? "").split(",").filter(Boolean).map(Number))
+                  : (multiSelections[ri] ?? new Set<number>());
+                const correctVals = new Set(correctMulti[ri] ?? []);
+                const isRowCorrect = locked !== undefined &&
+                  selectedVals.size === correctVals.size &&
+                  [...correctVals].every((v) => selectedVals.has(v));
+                const isRowWrong = locked !== undefined && !isRowCorrect;
+                return (
+                  <tr
+                    key={ri}
+                    className={`border-t border-white/10 transition-colors ${
+                      isRowCorrect ? "bg-emerald-500/10" :
+                      isRowWrong   ? "bg-red-500/10" : ""
+                    }`}
+                  >
+                    <td className="py-2 md:py-3 pr-3 text-xs md:text-sm text-blue-50 font-medium">
+                      {row}
+                      {isRowWrong && (
+                        <span className="ml-2 text-[10px] text-red-300">
+                          (тачно: {[...correctVals].map((ci) => cols[ci]).join(", ")})
+                        </span>
+                      )}
+                    </td>
+                    {cols.map((_, ci) => {
+                      const isSelected = selectedVals.has(ci);
+                      const isThisCorrect = locked !== undefined && correctVals.has(ci);
+                      const isThisWrong = locked !== undefined && isSelected && !correctVals.has(ci);
+                      return (
+                        <td key={ci} className="py-2 md:py-3 text-center">
+                          <button
+                            disabled={locked !== undefined}
+                            onClick={() => toggleMulti(ri, ci)}
+                            className="mx-auto flex h-7 w-7 md:h-8 md:w-8 items-center justify-center rounded-full border-2 transition-all"
+                            style={{
+                              borderColor: isThisCorrect ? "#34d399"
+                                : isThisWrong ? "#f87171"
+                                : isSelected ? "white"
+                                : "rgba(255,255,255,0.25)",
+                              background: isThisCorrect ? "rgba(52,211,153,0.2)"
+                                : isThisWrong ? "rgba(248,113,113,0.2)"
+                                : isSelected ? "rgba(255,255,255,0.2)"
+                                : "transparent",
+                            }}
+                            aria-label={`${row} — ${cols[ci]}`}
+                          >
+                            {isSelected && (
+                              <span
+                                className="block h-3 w-3 md:h-3.5 md:w-3.5 rounded-full"
+                                style={{
+                                  background: isThisCorrect ? "#34d399"
+                                    : isThisWrong ? "#f87171"
+                                    : "white",
+                                }}
+                              />
+                            )}
+                          </button>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              }
+
+              // single-select red (ponašanje kao pre)
               const sel = locked !== undefined ? lockedSelections[ri] : selections[ri];
-              const isRowCorrect = locked !== undefined && sel === correct[ri];
-              const isRowWrong = locked !== undefined && sel !== correct[ri];
+              const isRowCorrect = locked !== undefined && sel === correctSingle[ri];
+              const isRowWrong = locked !== undefined && sel !== correctSingle[ri];
               return (
                 <tr
                   key={ri}
@@ -924,19 +1035,19 @@ function MatrixUI({ question, locked, onCommit, onRegisterConfirm }: {
                     {row}
                     {isRowWrong && (
                       <span className="ml-2 text-[10px] text-red-300">
-                        (тачно: {cols[correct[ri]]})
+                        (тачно: {cols[correctSingle[ri]]})
                       </span>
                     )}
                   </td>
                   {cols.map((_, ci) => {
                     const isSelected = sel === ci;
-                    const isThisCorrect = locked !== undefined && ci === correct[ri];
-                    const isThisWrong = locked !== undefined && isSelected && ci !== correct[ri];
+                    const isThisCorrect = locked !== undefined && ci === correctSingle[ri];
+                    const isThisWrong = locked !== undefined && isSelected && ci !== correctSingle[ri];
                     return (
                       <td key={ci} className="py-2 md:py-3 text-center">
                         <button
                           disabled={locked !== undefined}
-                          onClick={() => pick(ri, ci)}
+                          onClick={() => pickSingle(ri, ci)}
                           className="mx-auto flex h-7 w-7 md:h-8 md:w-8 items-center justify-center rounded-full border-2 transition-all"
                           style={{
                             borderColor: isThisCorrect ? "#34d399"
@@ -984,7 +1095,6 @@ function MatrixUI({ question, locked, onCommit, onRegisterConfirm }: {
     </div>
   );
 }
-
 function QuizPage() {
   const [, navigate] = useLocation();
   const search = useSearch();
